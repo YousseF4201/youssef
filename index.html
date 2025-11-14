@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuickQR - QR Code Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      html {
+        color-scheme: light dark;
+      }
+      body {
+        font-family: 'Cairo', sans-serif;
+      }
+      /* Simple style for the range slider */
+      input[type=range] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 8px;
+        background: #e2e8f0; /* slate-200 */
+        border-radius: 5px;
+        outline: none;
+        opacity: 0.7;
+        transition: opacity .2s;
+      }
+      .dark input[type=range] {
+        background: #475569; /* slate-600 */
+      }
+      input[type=range]:hover {
+        opacity: 1;
+      }
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #4f46e5; /* indigo-600 */
+        cursor: pointer;
+        border-radius: 50%;
+      }
+      input[type=range]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: #4f46e5; /* indigo-600 */
+        cursor: pointer;
+        border-radius: 50%;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+    "qrcode": "https://aistudiocdn.com/qrcode@^1.5.4",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+<!-- Babel for in-browser JSX/TSX transformation -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-100 dark:bg-slate-900">
+    <div id="root"></div>
+    <script type="text/babel" data-type="module">
+      import React, { useState, useEffect, useCallback } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import QRCode from 'qrcode';
+
+      const QRIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 ml-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h2v2H4zM4 10h2v2H4zM4 16h2v2H4zM10 4h2v2h-2zM10 10h2v2h-2zM10 16h2v2h-2zM16 4h2v2h-2zM16 10h2v2h-2zM16 16h2v2h-2z" />
+          <rect x="3" y="3" width="6" height="6" rx="1" />
+          <rect x="15" y="3" width="6" height="6" rx="1" />
+          <rect x="3" y="15" width="6" height="6" rx="1" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 12h2v2h-2zM10 12h.01M12 10h.01M14 12h.01M12 14h.01" />
+        </svg>
+      );
+      
+      const DownloadIcon = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 inline-block" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+      );
+
+      const ShareIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 inline-block" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+        </svg>
+      );
+
+      const ClearIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        </svg>
+      );
+
+      const SunIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      );
+
+      const MoonIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      );
+
+
+      function App() {
+          const [text, setText] = useState('صلي علي سيدنا محمد');
+          const [debouncedText, setDebouncedText] = useState(text);
+          const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+          const [canShare, setCanShare] = useState(false);
+          const [options, setOptions] = useState({
+            errorCorrectionLevel: 'H',
+            margin: 1,
+            width: 300,
+            color: {
+              dark: '#0f172a',
+              light: '#ffffff',
+            },
+          });
+          const [isDarkMode, setIsDarkMode] = useState(() => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+              return savedTheme === 'dark';
+            }
+            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          });
+
+          useEffect(() => {
+            if (navigator.share) {
+              setCanShare(true);
+            }
+          }, []);
+
+          useEffect(() => {
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+          }, [isDarkMode]);
+
+          // Debounce text input
+          useEffect(() => {
+            const timer = setTimeout(() => setDebouncedText(text), 300);
+            return () => clearTimeout(timer);
+          }, [text]);
+
+          useEffect(() => {
+              if (debouncedText.trim() === '') {
+                  setQrCodeDataUrl('');
+                  return;
+              }
+
+              const generateQrCode = async () => {
+                  try {
+                      const url = await QRCode.toDataURL(debouncedText, {
+                        ...options,
+                        type: 'image/png',
+                      });
+                      setQrCodeDataUrl(url);
+                  } catch (err) {
+                      console.error('Failed to generate QR code', err);
+                      setQrCodeDataUrl('');
+                  }
+              };
+
+              generateQrCode();
+          }, [debouncedText, options]);
+
+          const handleDownload = useCallback(() => {
+              if (!qrCodeDataUrl) return;
+
+              const link = document.createElement('a');
+              link.href = qrCodeDataUrl;
+              link.download = 'qrcode.png';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+          }, [qrCodeDataUrl]);
+
+          const handleShare = useCallback(async () => {
+            if (!qrCodeDataUrl || !canShare) return;
+            try {
+              const response = await fetch(qrCodeDataUrl);
+              const blob = await response.blob();
+              const file = new File([blob], 'qrcode.png', { type: 'image/png' });
+              if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                  files: [file],
+                  title: 'رمز الاستجابة السريعة',
+                  text: `رمز QR لـ: ${debouncedText}`,
+                });
+              } else {
+                alert("المشاركة غير مدعومة لهذا النوع من الملفات.");
+              }
+            } catch (error) {
+              if (error.name !== 'AbortError') {
+                console.error('حدث خطأ أثناء المشاركة:', error);
+                alert(`حدث خطأ أثناء المشاركة: ${error.message}`);
+              }
+            }
+          }, [qrCodeDataUrl, debouncedText, canShare]);
+
+          const handleOptionChange = (e) => {
+            const { name, value } = e.target;
+            if (name === 'dark' || name === 'light') {
+              setOptions(prev => ({ ...prev, color: { ...prev.color, [name]: value } }));
+            } else {
+              setOptions(prev => ({ ...prev, [name]: value }));
+            }
+          };
+
+          return (
+              <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center p-4 transition-colors duration-300">
+                  <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 md:p-8 transform transition-all duration-500 relative">
+                      <button
+                          onClick={() => setIsDarkMode(!isDarkMode)}
+                          className="absolute top-4 left-4 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full p-2 transition-colors duration-300"
+                          aria-label="Toggle dark mode"
+                      >
+                          {isDarkMode ? <SunIcon /> : <MoonIcon />}
+                      </button>
+                      <div className="text-center mb-6">
+                          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-white flex items-center justify-center">
+                              QuickQR
+                              <QRIcon />
+                          </h1>
+                          <p className="text-slate-500 dark:text-slate-400 mt-2">
+                              أدخل نصًا أو رابطًا لإنشاء رمز QR الخاص بك فورًا.
+                          </p>
+                      </div>
+                      
+                      <div className="relative mb-4">
+                          <label htmlFor="qr-text" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                              النص أو الرابط
+                          </label>
+                          <textarea
+                              id="qr-text"
+                              rows={3}
+                              className="w-full p-3 pr-10 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out text-slate-800 dark:text-slate-200"
+                              placeholder="اكتب هنا..."
+                              value={text}
+                              onChange={(e) => setText(e.target.value)}
+                          />
+                          {text && (
+                            <button onClick={() => setText('')} className="absolute top-10 left-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" title="مسح النص">
+                              <ClearIcon />
+                            </button>
+                          )}
+                      </div>
+
+                      <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg mb-6">
+                        <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-4 text-center">
+                          خيارات التخصيص
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="dark" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">لون النقاط</label>
+                                <input type="color" name="dark" id="dark" value={options.color.dark} onChange={handleOptionChange} className="w-full h-10 p-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer"/>
+                            </div>
+                            <div>
+                                <label htmlFor="light" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">لون الخلفية</label>
+                                <input type="color" name="light" id="light" value={options.color.light} onChange={handleOptionChange} className="w-full h-10 p-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer"/>
+                            </div>
+                          </div>
+                          <div>
+                            <label htmlFor="width" className="flex justify-between text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              <span>الحجم</span>
+                              <span>{options.width}px</span>
+                            </label>
+                            <input type="range" name="width" id="width" min="100" max="1000" step="10" value={options.width} onChange={handleOptionChange} />
+                          </div>
+                          <div>
+                            <label htmlFor="errorCorrectionLevel" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">مستوى التصحيح</label>
+                            <select name="errorCorrectionLevel" id="errorCorrectionLevel" value={options.errorCorrectionLevel} onChange={handleOptionChange} className="w-full p-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out text-slate-800 dark:text-slate-200">
+                              <option value="L">منخفض (Low)</option>
+                              <option value="M">متوسط (Medium)</option>
+                              <option value="Q">عالي (Quartile)</option>
+                              <option value="H">أعلى (High)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center justify-center space-y-4">
+                          {qrCodeDataUrl ? (
+                              <div className="p-4 bg-white rounded-lg border border-slate-200 dark:border-slate-600 shadow-inner">
+                                   <img src={qrCodeDataUrl} alt="Generated QR Code" className="w-48 h-48 md:w-56 md:h-56 rounded-md" />
+                              </div>
+                          ) : (
+                              <div className="w-48 h-48 md:w-56 md:h-56 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600">
+                                 <p className="text-slate-400 dark:text-slate-500 text-center text-sm p-4">سيظهر رمز QR هنا</p>
+                              </div>
+                          )}
+
+                          <div className="w-full flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={handleDownload}
+                                disabled={!qrCodeDataUrl}
+                                className="w-full flex items-center justify-center bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ease-in-out transform hover:scale-105"
+                            >
+                                تحميل كـ PNG
+                                <DownloadIcon />
+                            </button>
+                            {canShare && (
+                              <button
+                                  onClick={handleShare}
+                                  disabled={!qrCodeDataUrl}
+                                  className="w-full flex items-center justify-center bg-slate-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ease-in-out transform hover:scale-105"
+                              >
+                                  مشاركة
+                                  <ShareIcon />
+                              </button>
+                            )}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+      }
+      
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
+    </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
